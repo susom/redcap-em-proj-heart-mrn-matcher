@@ -6,7 +6,7 @@ require_once "src/emLoggerTrait.php";
 
 use ExternalModules\ExternalModules;
 use REDCap;
-use Message;
+use DateTime;
 
 
 
@@ -56,9 +56,113 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
     );
 
 
+
+    public function compareSelectedFields($candidate, $existing) {
+        $record_id = REDCap::getRecordIdField();
+        $j_map = $this->getProjectSetting('mapping-json');
+        $map = json_decode($j_map, true);
+        //$this->emDebug($map);
+
+        $matched = array();
+        $unmatched = array();
+        $header = array();
+
+        $match_field = $this->getProjectSetting('match-field');
+        $header[] = "Target ". $match_field;
+        $header[] = $record_id;
+
+        $compare_fields = $this->getProjectSetting('compare-field');
+        foreach ($compare_fields as $c_field) {
+            $header[] = "Target ". $c_field;
+            $header[] = "RC ".$c_field;
+            $header[] = "Compare ".$c_field;
+        }
+
+        $date_fields = $this->getProjectSetting('date-field');
+        foreach ($date_fields as $d_field) {
+            $header[] = "Target ". $d_field;
+            $header[] = "RC ".$d_field;
+            $header[] = "diff ".$d_field;
+        }
+
+
+        foreach ($candidate as $k => $row) {
+            $candidate = array();
+            $v = explode(",", $row);
+
+
+            $match_value = $v[$map[$match_field]];
+            //$this->emDebug("MATCH FIELD VALUED: ", $match_value);
+
+            //store the selected fields to report
+
+            $candidate["Check " . $match_field] = $match_value;
+
+            //search current REDCap database for existing $match_field
+            //get column of $match_field from redcap data
+            $match_ids = array_column($existing, $match_field);
+            //$this->emDebug("COLUMN OF UNOS REDCAP", $match_ids);
+            //get keys of all matches
+            $found = array_keys(array_map('strtoupper', $match_ids), $match_value);
+            //$this->emDebug("FOUND:", $found); exit;
+
+            //if found, do string comparison for each of the $compare_fields and show percentage, $date_fields and show diff_date
+            foreach ($found as $ik => $iv) {
+                //record the record_id
+
+                $candidate[$record_id] = $existing[$iv][$record_id];
+
+                //store the redcap fields to report
+                foreach ($compare_fields as $c_field) {
+                    $candidate["Check " . $c_field] = $v[$map[$c_field]];
+
+                    $candidate["RC_".$c_field] = $existing[$iv][$c_field];
+
+                    //compare the strings
+                    similar_text(strtoupper($candidate["RC_".$c_field]),strtoupper($candidate["Check " . $c_field]), $percent_compare);
+
+                    $candidate['compare_'.$c_field] .= sprintf('%0.2f',$percent_compare);
+                }
+
+                $date_fields = $this->getProjectSetting('date-field');
+                foreach ($date_fields as $d_field) {
+                    $candidate["Check " . $d_field] = $v[$map[$d_field]];
+
+                    $candidate["RC_".$d_field] = $existing[$iv]["Check " . $d_field];
+
+                    $date_rc = new DateTime($candidate["RC_".$d_field] );
+                    $date_candidate  = new DateTime($candidate[$d_field]);
+                    $dDiff = $date_rc->diff($date_candidate);
+
+                    $candidate['diff_'.$d_field] = $dDiff->format('%r%a');
+
+                }
+            }
+
+            if ($found) {
+                //$matched[$k] = $candidate;
+
+                $matched[$k] = array_merge($candidate, $this->getRow($map, ($v)));
+
+            } else {
+                //$unmatched[$k] = $candidate;
+                //$unmatched[$k] = $v;
+                $unmatched[$k] =  $this->getRow($map, $v);
+                //$this->getRow($map, $v);
+
+                //$print_unmatched[$k] = $this->getRow($map, $v);
+            }
+            //$this->emDebug($candidate); exit;
+            //$this->emDebug($matched, $unmatched); exit;
+        }
+        //$this->emDebug($header, array_keys($map), array_merge($header, array_keys($map)));
+        return array(array_merge($header, array_keys($map)), $matched, array_keys($map), $unmatched);
+    }
+
     /**
      *
      * ATTEMPT 3: Search on matching UNOSID only, then do string comprasion of last name for visual verification
+     * WRitten specific for HLA
      *
      * @param $candidate
      * @param $existing
@@ -160,7 +264,7 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
                 //$print_unmatched[$k] = $this->getRow($map, $v);
             }
         }
-        //$this->emDebug($matches);
+        $this->emDebug($matched);
         //$this->emDebug( $print_matched, $print_unmatched);
         //file_put_contents("foo.csv", $print_matched);
         return array(array_merge($header, array_keys($map)), $matched, array_keys($map), $unmatched);
@@ -254,11 +358,12 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
 
 
     public function getRow($map, $row) {
+        //$this->emDebug($map, $v);
         $temp = array();
         foreach ($map as $key => $col) {
             $temp[$key] = (trim($row[$col]) == 'NULL') ? null :  $row[$col];
         }
-        //$this->emDebug($temp); exit;
+        //$this->emDebug($temp);
         return $temp;
     }
 
@@ -288,22 +393,30 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
     }
 
     public function getProjectData() {
+        //get the list of target fields from the config settings
+        $match_field = $this->getProjectSetting('match-field');
+        //$this->emDebug("Match field: ", $match_field);
+
+        $compare_fields = $this->getProjectSetting('compare-field');
+        //$this->emDebug("String compare field: ", $compare_fields);
+
+        $date_fields  = $this->getProjectSetting('date-field');
+        //$this->emDebug("Date compare fields:", $date_fields);
+
+
         $record_id = REDCap::getRecordIdField();
         //$get_data = array_merge();
 
         //filter those with  unos iD
-        $get_fields = array(
-            REDCap::getRecordIdField(),
-            'unos_id',
-            'dot',
-            'last_name',
-            'first_name',
-            'mrn_fix'
-        );
+        $get_fields = array_merge(array($record_id,$match_field), $compare_fields, $date_fields);
+        //$this->emDebug($get_fields);
 
         //?? no single quotes around field name!!
-        $filter = "[unos_id] <> ''";
-        $filter2 = "[" . $filter_event . "][" . $filter_field . "] = '$filter_value'";
+        //$filter = "[unos_id] <> ''";
+        $filter = "[". $match_field. "] <> ''";
+        //$filter2 = "[" . $filter_event . "][" . $filter_field . "] = '$filter_value'";
+
+        //$this->emDebug($get_fields, $filter);
 
         $params = array(
             'return_format'    => 'json',

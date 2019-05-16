@@ -35,15 +35,22 @@
 
   "project-settings": [
     {
-      "key": "match-field-1",
+      "key": "match-field",
       "name": "<b>Select a primary field to match against. </b><br>For example, if matching on MRN, select the target mrn field in the project",
+      "required": false,
+      "type": "field-list",
+      "repeatable": false
+    },
+    {
+      "key": "compare-field",
+      "name":  "<b>Select a field to compare strings</b><br>For example, select last name to see a percentage match score on the incoming last name against the existing last name",
       "required": false,
       "type": "field-list",
       "repeatable": true
     },
     {
-      "key": "compare-field-3",
-      "name":  "<b>Select a field to compare strings</b><br>For example, select last name to see a percentage match score on the incoming last name against the existing last name",
+      "key": "date-field",
+      "name":  "<b>Select a date field to compare </b><br>For example, select date of tx to see diff in date compared to the incoming date",
       "required": false,
       "type": "field-list",
       "repeatable": true

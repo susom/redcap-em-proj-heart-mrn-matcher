@@ -47,7 +47,10 @@ $existing = $module->getProjectData();
 //$matches = $module->compareNamesMRN($candidate, $existing);
 
 // TRY 3: search on UNOS ID, string compare last name and present comparison percentage for visual verification
-list($header, $matched, $unmatched_header,  $unmatched) = $module->compareUnosOnly($candidate, $existing);
+//list($header, $matched, $unmatched_header,  $unmatched) = $module->compareUnosOnly($candidate, $existing);
+
+// TRY 4; search on config selected fields
+list($header, $matched, $unmatched_header,  $unmatched) = $module->compareSelectedFields($candidate, $existing);
 //$module->emDebug($matches);
 
 ?>

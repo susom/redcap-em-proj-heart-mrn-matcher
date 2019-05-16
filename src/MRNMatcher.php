@@ -29,7 +29,8 @@ $module->emDebug("FILE IS ".$file);
 $candidate = $module->getEdoc($file);
 
 $header = array_shift($candidate);
-$module->emDebug($header, "HEADER");
+//$module->emDebug($header, "HEADER");
+//$module->emDebug($candidate, "CANDIDATE"); exit;
 
 
 //list($header, $candidate) = $module->loadCandidateFile($file);

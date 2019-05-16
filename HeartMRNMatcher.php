@@ -88,7 +88,9 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
 
         foreach ($candidate as $k => $row) {
             $candidate = array();
-            $v = explode(",", $row);
+            //no can't explode on ',' because there are larger strings
+            //$v = explode(",", $row);
+            $v = str_getcsv($row, ",", '"');
 
 
             $match_value = $v[$map[$match_field]];
@@ -128,13 +130,17 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
                 foreach ($date_fields as $d_field) {
                     $candidate["Check " . $d_field] = $v[$map[$d_field]];
 
-                    $candidate["RC_".$d_field] = $existing[$iv]["Check " . $d_field];
+                    $candidate["RC_".$d_field] = $existing[$iv][$d_field];
 
                     $date_rc = new DateTime($candidate["RC_".$d_field] );
-                    $date_candidate  = new DateTime($candidate[$d_field]);
+                    //$this->emDebug($candidate["RC_".$d_field], $date_rc, $date_rc_1);
+
+                    $date_candidate  = new DateTime($candidate["Check " . $d_field]);
                     $dDiff = $date_rc->diff($date_candidate);
 
+                    //$this->emDebug($candidate["Check " . $d_field], $date_candidate, $date_candidate_1);
                     $candidate['diff_'.$d_field] = $dDiff->format('%r%a');
+
 
                 }
             }

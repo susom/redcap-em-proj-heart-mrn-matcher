@@ -1,0 +1,71 @@
+{
+  "name": "Heart MRN Matcher",
+
+  "namespace":"Stanford\\HeartMRNMatcher",
+
+  "description": "A module to match up MRN between HLA and existing database",
+
+  "authors": [
+    {
+      "name": "Jae Lee",
+      "email": "jael@stanford.edu",
+      "institution": "Stanford University"
+    }
+  ],
+
+  "links": {
+    "control-center": [
+    ],
+    "project": [
+      {
+        "name": "Match HLA row to existing REDCap record on UNOS ID ",
+        "icon": "gear",
+        "url": "src/MRNMatcher.php"
+      }
+    ]
+  },
+  "system-settings": [
+    {
+      "key": "enable-system-debug-logging",
+      "name": "<b>Enable Debug Logging (system-wide)</b><i>(Requires emLogger)</i>",
+      "required": false,
+      "type": "checkbox"
+    }
+  ],
+
+  "project-settings": [
+    {
+      "key": "match-field-1",
+      "name": "<b>Select a primary field to match against. </b><br>For example, if matching on MRN, select the target mrn field in the project",
+      "required": false,
+      "type": "field-list",
+      "repeatable": true
+    },
+    {
+      "key": "compare-field-3",
+      "name":  "<b>Select a field to compare strings</b><br>For example, select last name to see a percentage match score on the incoming last name against the existing last name",
+      "required": false,
+      "type": "field-list",
+      "repeatable": true
+    },
+    {
+      "key": "mapping-json",
+      "name": "<b>MAPPING JSON</b><br>Enter JSON to define incoming column structure with REDCap target field name as key and column number as value. <br> For ex: <br> { \"hla_mrn\": 0, \"last_name\": 1} ",
+      "required": false,      "type": "json"
+    },
+    {
+      "key": "hla-file",
+      "name": "<b>HLA File location:</b> <br>Select the csv file that contains the data to be uploaded",
+      "required": false,
+      "type": "file",
+      "repeatable": false
+    },
+    {
+      "key": "enable-project-debug-logging",
+      "name": "<b>Enable Debug Logging</b><i>(Requires emLogger)</i>",
+      "required": false,
+      "type": "checkbox"
+    }
+
+  ]
+}

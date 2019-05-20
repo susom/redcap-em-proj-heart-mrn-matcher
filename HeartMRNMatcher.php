@@ -61,29 +61,35 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
         $record_id = REDCap::getRecordIdField();
         $j_map = $this->getProjectSetting('mapping-json');
         $map = json_decode($j_map, true);
-        //$this->emDebug($map);
+        //$this->emDebug($map);  exit;
 
         $matched = array();
         $unmatched = array();
         $header = array();
 
         $match_field = $this->getProjectSetting('match-field');
-        $header[] = "Target ". $match_field;
-        $header[] = $record_id;
+        $header[] = "Target " . $match_field;
+        $header[] = "RECID: ".$record_id;
 
         $compare_fields = $this->getProjectSetting('compare-field');
-        foreach ($compare_fields as $c_field) {
-            $header[] = "Target ". $c_field;
-            $header[] = "RC ".$c_field;
-            $header[] = "Compare ".$c_field;
+        if (isset($compare_fields)) {
+            foreach ($compare_fields as $c_field) {
+                $header[] = "Target " . $c_field;
+                $header[] = "RC " . $c_field;
+                $header[] = "Compare " . $c_field;
+            }
         }
 
         $date_fields = $this->getProjectSetting('date-field');
-        foreach ($date_fields as $d_field) {
-            $header[] = "Target ". $d_field;
-            $header[] = "RC ".$d_field;
-            $header[] = "diff ".$d_field;
+        if (isset($date_fields)) {
+
+            foreach ($date_fields as $d_field) {
+                $header[] = "Target " . $d_field;
+                $header[] = "RC " . $d_field;
+                $header[] = "diff " . $d_field;
+            }
         }
+
 
 
         foreach ($candidate as $k => $row) {
@@ -91,10 +97,10 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
             //no can't explode on ',' because there are larger strings
             //$v = explode(",", $row);
             $v = str_getcsv($row, ",", '"');
-
+            //$this->emDebug($v);
 
             $match_value = $v[$map[$match_field]];
-            //$this->emDebug("MATCH FIELD VALUED: ", $match_value);
+            //$this->emDebug("MATCH FIELD VALUED: ",$match_field,$map[$match_field],$match_value); exit;
 
             //store the selected fields to report
 
@@ -105,18 +111,19 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
             $match_ids = array_column($existing, $match_field);
             //$this->emDebug("COLUMN OF UNOS REDCAP", $match_ids);
             //get keys of all matches
-            $found = array_keys(array_map('strtoupper', $match_ids), $match_value);
+            $found = array_keys(array_map('strtoupper', $match_ids), trim($match_value));
             //$this->emDebug("FOUND:", $found); exit;
 
             //if found, do string comparison for each of the $compare_fields and show percentage, $date_fields and show diff_date
             foreach ($found as $ik => $iv) {
                 //record the record_id
 
-                $candidate[$record_id] = $existing[$iv][$record_id];
+                $candidate["RECID:".$record_id] = $existing[$iv][$record_id];
 
                 //store the redcap fields to report
-                foreach ($compare_fields as $c_field) {
-                    $candidate["Check " . $c_field] = $v[$map[$c_field]];
+                if (isset($compare_fields)) {
+                    foreach ($compare_fields as $c_field) {
+                        $candidate["Check " . $c_field] = $v[$map[$c_field]];
 
                     $candidate["RC_".$c_field] = $existing[$iv][$c_field];
 
@@ -124,24 +131,27 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
                     similar_text(strtoupper($candidate["RC_".$c_field]),strtoupper($candidate["Check " . $c_field]), $percent_compare);
 
                     $candidate['compare_'.$c_field] .= sprintf('%0.2f',$percent_compare);
+                    }
                 }
 
                 $date_fields = $this->getProjectSetting('date-field');
-                foreach ($date_fields as $d_field) {
-                    $candidate["Check " . $d_field] = $v[$map[$d_field]];
+                if (isset($date_fields)) {
 
-                    $candidate["RC_".$d_field] = $existing[$iv][$d_field];
+                    foreach ($date_fields as $d_field) {
+                        $candidate["Check " . $d_field] = $v[$map[$d_field]];
 
-                    $date_rc = new DateTime($candidate["RC_".$d_field] );
-                    //$this->emDebug($candidate["RC_".$d_field], $date_rc, $date_rc_1);
+                        $candidate["RC_" . $d_field] = $existing[$iv][$d_field];
 
-                    $date_candidate  = new DateTime($candidate["Check " . $d_field]);
-                    $dDiff = $date_rc->diff($date_candidate);
+                        $date_rc = new DateTime($candidate["RC_" . $d_field]);
+                        //$this->emDebug($candidate["RC_".$d_field], $date_rc, $date_rc_1);
 
-                    //$this->emDebug($candidate["Check " . $d_field], $date_candidate, $date_candidate_1);
-                    $candidate['diff_'.$d_field] = $dDiff->format('%r%a');
+                        $date_candidate = new DateTime($candidate["Check " . $d_field]);
+                        $dDiff = $date_rc->diff($date_candidate);
 
+                        //$this->emDebug($candidate["Check " . $d_field], $date_candidate, $date_candidate_1);
+                        $candidate['diff_' . $d_field] = $dDiff->format('%r%a');
 
+                    }
                 }
             }
 
@@ -161,7 +171,7 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
             //$this->emDebug($candidate); exit;
             //$this->emDebug($matched, $unmatched); exit;
         }
-        //$this->emDebug($header, array_keys($map), array_merge($header, array_keys($map)));
+        //$this->emDebug($header, array_keys($map), array_merge($header, array_keys($map))); //
         return array(array_merge($header, array_keys($map)), $matched, array_keys($map), $unmatched);
     }
 
@@ -364,12 +374,12 @@ class HeartMRNMatcher extends \ExternalModules\AbstractExternalModule {
 
 
     public function getRow($map, $row) {
-        //$this->emDebug($map, $v);
+        //$this->emDebug($map, $row);
         $temp = array();
         foreach ($map as $key => $col) {
             $temp[$key] = (trim($row[$col]) == 'NULL') ? null :  $row[$col];
         }
-        //$this->emDebug($temp);
+        //$this->emDebug($temp);  exit;
         return $temp;
     }
 
